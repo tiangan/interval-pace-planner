@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Interval Pace Planner</title>
+<link rel="icon" href="data:," />
+<meta property="og:title" content="Interval Pace Planner" />
+<meta property="og:description" content="Calculate your training paces and run three structured interval sessions with a simple, readable timer." />
+<meta property="og:type" content="website" />
+<meta name="description" content="Enter your 3-mile time, get interval, threshold and easy paces, and run a timed session with audio cues." />
+<style>
+:root{--bg:#0e1113;--panel:#161a1d;--line:#2a3035;--fg:#eef1ec;--dim:#8d969b;--acc:#d7ff3a;--accInk:#141a00;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);min-height:100dvh;-webkit-font-smoothing:antialiased}
+main{max-width:980px;margin:0 auto;padding:24px 20px 48px}
+header{display:flex;justify-content:space-between;align-items:center;padding-bottom:20px;border-bottom:1px solid var(--line);margin-bottom:28px}
+.brand{font:700 13px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase}
+.brand b{color:var(--acc)}
+.step{font:12px var(--mono);color:var(--dim);letter-spacing:.12em}
+section{display:none;animation:in .35s ease}
+section.on{display:block}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+h1{font-size:clamp(34px,8vw,64px);line-height:1;letter-spacing:-.03em;font-weight:800}
+h1 em{font-style:normal;color:var(--acc)}
+p.lead{color:var(--dim);font-size:18px;margin:14px 0 32px;max-width:36ch}
+label{display:block;font:600 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+input{width:100%;max-width:420px;background:transparent;border:0;border-bottom:3px solid var(--line);color:var(--fg);font:700 clamp(64px,18vw,120px)/1.1 var(--mono);padding:4px 0;outline:none;transition:border-color .2s;caret-color:var(--acc)}
+input:focus{border-color:var(--acc)}
+.err{color:var(--acc);min-height:24px;margin:10px 0;font-size:15px}
+button{font:700 18px var(--sans);border-radius:14px;padding:18px 28px;border:2px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer;transition:transform .12s,border-color .2s,background .2s}
+button:hover{border-color:var(--dim)}
+button:active{transform:scale(.97)}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+button.pri{background:var(--acc);border-color:var(--acc);color:var(--accInk)}
+button.pri:hover{filter:brightness(1.08)}
+button.link{background:none;border:0;padding:8px 0;font-size:15px;color:var(--dim)}
+button.link:hover{color:var(--acc)}
+.paces{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:20px 0 10px}
+.paces div{background:var(--panel);padding:16px}
+.paces small{display:block;font:11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.paces strong{font:700 clamp(18px,4.5vw,24px) var(--mono)}
+.paces .hi strong{color:var(--acc)}
+.note{color:var(--dim);font-size:15px;margin-bottom:28px}
+.sessions{display:grid;gap:16px}
+.card{text-align:left;width:100%;padding:22px;display:block;font-weight:400}
+.card:hover{border-color:var(--acc)}
+.card h3{font-size:22px;display:flex;justify-content:space-between;gap:12px}
+.card h3 span{font:500 14px var(--mono);color:var(--acc)}
+.card ol{list-style:none;padding:0;margin-top:14px;font-size:15px}
+.card li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 12px;padding:8px 0;border-top:1px dashed var(--line)}
+.card li b{font-family:var(--mono);font-weight:600;white-space:nowrap}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.state{font:700 12px var(--mono);letter-spacing:.16em;padding:6px 12px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
+.state.running{color:var(--accInk);background:var(--acc);border-color:var(--acc)}
+.state.complete{color:var(--acc);border-color:var(--acc)}
+.seg{font-size:clamp(26px,6vw,44px);font-weight:800;margin-top:28px;letter-spacing:-.02em}
+.tgt{font:600 clamp(18px,4vw,24px) var(--mono);color:var(--acc);margin-top:6px}
+.clock{font:800 clamp(72px,27vw,150px)/1 var(--mono);letter-spacing:-.05em;margin:18px 0 6px;font-variant-numeric:tabular-nums}
+.paused .clock{opacity:.45}
+.rep{font:600 18px var(--mono);color:var(--dim)}
+.bar{height:6px;background:var(--line);border-radius:6px;margin:24px 0;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:var(--acc);transform-origin:left;transform:scaleX(0);transition:transform .25s linear}
+.ctrls{display:flex;gap:12px}
+.ctrls button{flex:1}
+.next{margin-top:20px;color:var(--dim);font-size:15px}
+.msg{margin-top:20px;padding:14px 16px;border-left:3px solid var(--acc);background:var(--panel);font-size:14px;color:var(--dim);line-height:1.5}
+.msg.warn{color:var(--acc);border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media(min-width:820px){
+ main{padding:40px 40px 64px}
+ .sessions{grid-template-columns:repeat(3,1fr)}
+ .paces{grid-template-columns:repeat(4,1fr)}
+ .paces strong{font-size:18px}
+ .card li{flex-direction:column}
+ .timerwrap{display:grid;grid-template-columns:1fr 300px;gap:48px;align-items:start}
+}
+</style>
+</head>
+<body>
+<main>
+<header><div class="brand">Interval <b>/</b> Pace Planner</div><div class="step" id="step">01 / 03</div></header>
+
+<section id="s1" class="on">
+ <h1>Your 3-mile <em>time.</em></h1>
+ <p class="lead">One number sets every pace. Then pick a session and run.</p>
+ <form id="f" novalidate>
+  <label for="t">Minutes : Seconds</label>
+  <input id="t" inputmode="text" placeholder="24:00" autocomplete="off" aria-label="Current 3-mile time in minutes and seconds" aria-describedby="err" />
+  <div class="err" id="err" role="alert"></div>
+  <button class="pri" type="submit">Calculate</button>
+ </form>
+</section>
+
+<section id="s2">
+ <button class="link" data-go="1">&larr; Change time</button>
+ <h1 style="margin-top:12px">Pick a <em>session.</em></h1>
+ <div class="paces" id="paces"></div>
+ <p class="note">Easy: If you can’t hold a conversation, slow down further.</p>
+ <div class="sessions" id="sessions"></div>
+</section>
+
+<section id="s3">
+ <div class="top"><button class="link" id="back">&larr; Sessions</button><span class="state" id="state">READY</span></div>
+ <button class="link" id="home" type="button">&larr; Back to main page</button>
+ <div class="timerwrap">
+  <div id="tv">
+   <div class="seg" id="seg"></div>
+   <div class="tgt" id="tgt"></div>
+   <div class="clock" id="clock" aria-live="off">0:00</div>
+   <div class="rep" id="rep"></div>
+   <div class="bar"><i id="bar"></i></div>
+   <div class="ctrls"><button class="pri" id="go">Start</button><button id="rs">Reset</button></div>
+   <div class="next" id="next"></div>
+  </div>
+  <div>
+   <div class="msg" id="sess"></div>
+   <div class="msg">Keep this screen open and awake for audible cues. Browsers pause or throttle timers and sound in background tabs or when the phone locks; the timer catches up when you return, but missed beeps are not replayed.</div>
+   <div class="msg warn" id="audio" hidden></div>
+  </div>
+ </div>
+</section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const KEY = 'ipp.time';
+const fmt = s => { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+let P, plan, sel, idx = 0, endAt = 0, left = 0, tick = null, status = 'ready', ctx = null;
+
+function show(n) {
+  ['s1','s2','s3'].forEach((s, i) => $(s).classList.toggle('on', i + 1 === n));
+  $('step').textContent = '0' + n + ' / 03';
+  if (n !== 3) stop();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(+b.dataset.go));
+$('back').onclick = () => show(2);
+$('home').onclick = () => { reset(); show(1); };
+
+try { const v = localStorage.getItem(KEY); if (v) $('t').value = v; } catch (e) {}
+
+$('f').onsubmit = e => {
+  e.preventDefault();
+  const v = $('t').value.trim(), m = v.match(/^(\d{1,3}):(\d{2})$/);
+  if (!m) return $('err').textContent = 'Use MM:SS, e.g. 24:00.';
+  if (+m[2] > 59) return $('err').textContent = 'Seconds must be 00–59.';
+  const total = +m[1] * 60 + +m[2];
+  if (total <= 0) return $('err').textContent = 'Time must be greater than 0:00.';
+  $('err').textContent = '';
+  try { localStorage.setItem(KEY, v); } catch (e) {}
+  const mile = total / 3;
+  P = { mile, thr: mile + 27, e1: mile + 90, e2: mile + 150, r400: Math.round(mile / 4) };
+  render(); show(2);
+};
+
+function render() {
+  const easy = fmt(P.e1) + '–' + fmt(P.e2) + '/mi';
+  P.easy = easy;
+  $('paces').innerHTML = [['Interval', fmt(P.mile) + '/mi', 1], ['400m target', fmt(P.r400), 1], ['Threshold', fmt(P.thr) + '/mi'], ['Easy', easy]]
+    .map(([k, v, h]) => `<div class="${h ? 'hi' : ''}"><small>${k}</small><strong>${v}</strong></div>`).join('');
+  const E = (name, dur) => ({ name, dur, tgt: 'Easy ' + easy });
+  const S = {
+    '30/30s': () => { const a = [E('Warmup', 600)]; for (let i = 1; i <= 12; i++) a.push({ name: 'Interval', dur: 30, tgt: 'Interval ' + fmt(P.mile) + '/mi', r: i, n: 12 }, { ...E('Easy jog', 30), r: i, n: 12 }); a.push(E('Cooldown', 600)); return a; },
+    '400m repeats': () => { const a = [E('Warmup', 600)]; for (let i = 1; i <= 8; i++) { a.push({ name: '400m', dur: P.r400, tgt: '400m in ' + fmt(P.r400) + ' (' + fmt(P.mile) + '/mi)', r: i, n: 8 }); if (i < 8) a.push({ name: 'Rest', dur: 90, tgt: 'Stand still', r: i, n: 8 }); } a.push(E('Cooldown', 600)); return a; },
+    'Threshold': () => { const a = [E('Warmup', 600)]; for (let i = 1; i <= 2; i++) { a.push({ name: 'Threshold', dur: 600, tgt: 'Threshold ' + fmt(P.thr) + '/mi', r: i, n: 2 }); if (i < 2) a.push({ ...E('Easy jog', 120), r: i, n: 2 }); } a.push(E('Cooldown', 600)); return a; }
+  };
+  const desc = {
+    '30/30s': [['10:00 warmup', 'Easy ' + easy], ['12 × 0:30 interval', fmt(P.mile) + '/mi'], ['with 0:30 easy jog', 'Easy ' + easy], ['10:00 cooldown', 'Easy ' + easy]],
+    '400m repeats': [['10:00 warmup', 'Easy ' + easy], ['8 × 400m at ' + fmt(P.mile) + '/mi', fmt(P.r400) + ' each'], ['1:30 stationary rest between', 'Stand still'], ['10:00 cooldown', 'Easy ' + easy]],
+    'Threshold': [['10:00 warmup', 'Easy ' + easy], ['2 × 10:00 threshold', fmt(P.thr) + '/mi'], ['2:00 easy jog between', 'Easy ' + easy], ['10:00 cooldown', 'Easy ' + easy]]
+  };
+  $('sessions').innerHTML = '';
+  Object.keys(S).forEach(k => {
+    const segs = S[k](), tot = segs.reduce((s, x) => s + x.dur, 0);
+    const b = document.createElement('button');
+    b.className = 'card';
+    b.innerHTML = `<h3>${k}<span>${fmt(tot)}</span></h3><ol>${desc[k].map(([a, t]) => `<li>${a}<b>${t}</b></li>`).join('')}</ol>`;
+    b.onclick = () => { sel = k; plan = segs; $('sess').innerHTML = `<strong style="color:var(--fg)">${k}</strong> &middot; ${fmt(tot)} total<br>From 3-mile ${$('t').value.trim()}`; reset(); show(3); };
+    $('sessions').append(b);
+  });
+}
+
+function beep(n = 1, f = 880) {
+  if (!ctx) return;
+  try {
+    for (let i = 0; i < n; i++) {
+      const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + i * 0.22;
+      o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      o.start(t); o.stop(t + 0.2);
+    }
+  } catch (e) {}
+}
+function audioMsg(t) { $('audio').hidden = !t; $('audio').textContent = t || ''; }
+async function initAudio() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return audioMsg('Audio is not supported in this browser. The timer still works; watch the screen.');
+    ctx = ctx || new AC();
+    if (ctx.state === 'suspended') await ctx.resume();
+    audioMsg(ctx.state === 'running' ? '' : 'Audio is blocked. Check silent mode or browser settings; the timer still runs.');
+  } catch (e) { ctx = null; audioMsg('Audio could not start. The timer still runs without beeps.'); }
+}
+
+function setStatus(s) { status = s; $('state').textContent = s.toUpperCase(); $('state').className = 'state ' + s; $('tv').classList.toggle('paused', s === 'paused'); $('go').textContent = s === 'running' ? 'Pause' : s === 'paused' ? 'Resume' : 'Start'; $('go').disabled = s === 'complete'; }
+function stop() { clearInterval(tick); tick = null; }
+function reset() { stop(); idx = 0; left = plan[0].dur; loop.last = null; setStatus('ready'); draw(); }
+
+function draw() {
+  const s = plan[Math.min(idx, plan.length - 1)];
+  const done = status === 'complete';
+  $('seg').textContent = done ? 'Session complete' : s.name;
+  $('tgt').textContent = done ? sel + ' finished' : s.tgt;
+  $('clock').textContent = fmt(done ? 0 : Math.ceil(left - 1e-9));
+  const N = plan.find(x => x.n)?.n || 0;
+  $('rep').textContent = done ? N + ' / ' + N : (s.name === 'Warmup' ? 0 : s.name === 'Cooldown' ? N : s.r) + ' / ' + N;
+  $('bar').style.transform = 'scaleX(' + (done ? 1 : 1 - left / s.dur) + ')';
+  const nx = plan[idx + 1];
+  $('next').textContent = done ? '' : nx ? 'Next: ' + nx.name + ' ' + fmt(nx.dur) + ' · ' + nx.tgt : 'Last segment';
+}
+
+function loop() {
+  let now = Date.now(), moved = false;
+  while (now >= endAt) {
+    idx++; moved = true;
+    if (idx >= plan.length) { stop(); setStatus('complete'); beep(3, 1320); return draw(); }
+    endAt += plan[idx].dur * 1000;
+  }
+  left = (endAt - now) / 1000;
+  if (moved) beep(2, 1046);
+  else if (left <= 3.05 && left > 0 && Math.ceil(left) !== loop.last) { loop.last = Math.ceil(left); beep(1, 660); }
+  draw();
+}
+
+$('go').onclick = () => {
+  if (status === 'running') { loop(); if (status === 'complete') return; stop(); left = Math.max(0, (endAt - Date.now()) / 1000); setStatus('paused'); return draw(); }
+  initAudio();
+  endAt = Date.now() + left * 1000;
+  setStatus('running'); beep(1, 880);
+  tick = setInterval(loop, 200); loop();
+};
+$('rs').onclick = reset;
+document.addEventListener('visibilitychange', () => { if (!document.hidden && status === 'running') loop(); });
+</script>
+</body>
+</html>
